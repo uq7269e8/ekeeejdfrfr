@@ -7,23 +7,4 @@ on:
 
 jobs:
   update:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Build Docker image
-run: docker pull ghcr.io/${{ github.repository }}/hashtag-bot:main || docker build -t hashtag-bot .
-
-      - name: Run container
-        run: docker run -v ${{ github.workspace }}:/app hashtag-bot
-
-      - name: Commit changes
-        run: |
-          git config --global user.name github-actions
-          git config --global user.email actions@github.com
-          git add data.txt
-          git commit -m "Auto update hashtags using LLM" || echo "no change"
-          git push
-
+    runs-on
