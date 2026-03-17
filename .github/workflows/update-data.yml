@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # 🔥 VERY IMPORTANT (allows push)
+  contents: write
 
 jobs:
   run:
@@ -18,14 +18,12 @@ jobs:
         run: docker pull ghcr.io/uq7269e8/my-app:latest
 
       - name: Run container (update file)
-        run: docker run ghcr.io/uq7269e8/my-app:latest
+        run: docker run -v ${{ github.workspace }}:/app -w /app ghcr.io/uq7269e8/my-app:latest
 
-      # 🔥 THIS IS YOUR PART
       - name: Commit and push changes
         run: |
           git config --global user.email "toofiknic.e@gmail.com"
           git config --global user.name "uq7269e8"
-
           git add data.txt
           git commit -m "update data" || echo "No changes"
           git push
