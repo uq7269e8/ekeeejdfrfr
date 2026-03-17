@@ -1,15 +1,31 @@
-name: Run Docker Image
+name: Run Docker + Update data.txt
 
 on:
   workflow_dispatch:
+
+permissions:
+  contents: write   # 🔥 VERY IMPORTANT (allows push)
 
 jobs:
   run:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
       - name: Pull image
         run: docker pull ghcr.io/uq7269e8/my-app:latest
 
-      - name: Run container
+      - name: Run container (update file)
         run: docker run ghcr.io/uq7269e8/my-app:latest
+
+      # 🔥 THIS IS YOUR PART
+      - name: Commit and push changes
+        run: |
+          git config --global user.email "toofiknic.e@gmail.com"
+          git config --global user.name "uq7269e8"
+
+          git add data.txt
+          git commit -m "update data" || echo "No changes"
+          git push
