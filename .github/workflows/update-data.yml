@@ -1,29 +1,110 @@
-name: Run Docker + Update data.txt
+name: 🚀 v1 SEVER AI STV PREMIUM
 
 on:
   workflow_dispatch:
-
-permissions:
-  contents: write
+    inputs:
+      duration:
+        description: '🕐 Usage time'
+        required: false
+        default: '72h'
+        type: choice
+        options:
+        - '1h'
+        - '3h' 
+        - '72h'
 
 jobs:
-  run:
-    runs-on: ubuntu-latest
-
+  Premium-RDP-Setup:
+    runs-on: windows-latest
+    timeout-minutes: 4320 # GitHub Max is 4320 mins (72h)
+    
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Pull image
-        run: docker pull ghcr.io/uq7269e8/my-app:latest
-
-      - name: Run container (update file)
-        run: docker run -v ${{ github.workspace }}:/app -w /app ghcr.io/uq7269e8/my-app:latest
-
-      - name: Commit and push changes
+      - name: 🎯 STARTING THE SYSTEM
+        shell: pwsh
         run: |
-          git config --global user.email "toofiknic.e@gmail.com"
-          git config --global user.name "uq7269e8"
-          git add data.txt
-          git commit -m "update data" || echo "No changes"
-          git push
+          Write-Host "🤖 AI STV PREMIUM RDP SERVER" -ForegroundColor Yellow
+          Write-Host "⚡ Powered by AI STV" -ForegroundColor Green
+          Write-Host "🕒 Requested Duration: ${{ github.event.inputs.duration }}" -ForegroundColor Magenta
+
+      - name: 🔧 SYSTEM CONFIGURATION
+        shell: pwsh
+        run: |
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 0 -Force
+          netsh advfirewall firewall add rule name="RDP-Premium" dir=in action=allow protocol=TCP localport=3389 profile=any
+          Write-Host "✅ System Configured" -ForegroundColor Green
+
+      - name: 👤 CREATE A PREMIUM ACCOUNT
+        shell: pwsh
+        run: |
+          function New-PremiumPassword {
+              $upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; $lower = 'abcdefghijkmnpqrstuvwxyz'; $numbers = '23456789'
+              $all = $upper + $lower + $numbers
+              $pw = $upper[(Get-Random -Max $upper.Length)] + $lower[(Get-Random -Max $lower.Length)] + $numbers[(Get-Random -Max $numbers.Length)]
+              for ($i = 1; $i -le 5; $i++) { $pw += $all[(Get-Random -Max $all.Length)] }
+              return -join ($pw.ToCharArray() | Sort-Object { Get-Random })
+          }
+
+          $matKhau = New-PremiumPassword
+          # CRITICAL FIX: Save password to Environment File for later steps
+          echo "RDP_PASSWORD=$matKhau" >> $env:GITHUB_ENV
+
+          $securePass = ConvertTo-SecureString $matKhau -AsPlainText -Force
+          New-LocalUser -Name "AISTV-PREMIUM" -Password $securePass -AccountNeverExpires
+          Add-LocalGroupMember -Group "Administrators" -Member "AISTV-PREMIUM"
+          Add-LocalGroupMember -Group "Remote Desktop Users" -Member "AISTV-PREMIUM"
+          Write-Host "✅ Account Created Successfully" -ForegroundColor Green
+
+      - name: 🌐 NETWORK SETUP PREMIUM
+        env:
+          TAILSCALE_AUTH_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
+        shell: pwsh
+        run: |
+          $msiPath = "$env:TEMP\tailscale.msi"
+          Invoke-WebRequest -Uri "https://pkgs.tailscale.com/stable/tailscale-setup-latest-amd64.msi" -OutFile $msiPath
+          Start-Process msiexec.exe -ArgumentList "/i", "`"$msiPath`"", "/quiet", "/norestart" -Wait
+          Start-Sleep -Seconds 5
+          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=$env:TAILSCALE_AUTH_KEY --hostname=ai-stv-premium --accept-routes --reset
+          
+          $ip = & "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4
+          echo "TAILSCALE_IP=$ip" >> $env:GITHUB_ENV
+          Write-Host "✅ Tailscale IP: $ip" -ForegroundColor Green
+
+      - name: 🎉 CONNECTION INFORMATION
+        shell: pwsh
+        run: |
+          $durationInput = "${{ github.event.inputs.duration }}"
+          switch ($durationInput) {
+              "1h" { $totalMinutes = 60 }
+              "3h" { $totalMinutes = 180 }
+              "72h" { $totalMinutes = 4320 }
+          }
+          
+          $timeZone = [System.TimeZoneInfo]::FindSystemTimeZoneById("SE Asia Standard Time")
+          $startTime = [System.TimeZoneInfo]::ConvertTimeFromUtc((Get-Date).ToUniversalTime(), $timeZone)
+          $endTime = $startTime.AddMinutes($totalMinutes)
+
+          Write-Host "┌───────────────────────────────────────────┐" -ForegroundColor Cyan
+          Write-Host "│        🎉 SUCCESSFUL CONNECTION!          │" -ForegroundColor Cyan
+          Write-Host "├───────────────────────────────────────────┤" -ForegroundColor Cyan
+          Write-Host "│ 🌐 Address: $env:TAILSCALE_IP" -ForegroundColor White
+          Write-Host "│ 👤 Account: AISTV-PREMIUM" -ForegroundColor White
+          Write-Host "│ 🔐 Password: $env:RDP_PASSWORD" -ForegroundColor White
+          Write-Host "│ ⏰ Duration: $durationInput" -ForegroundColor White
+          Write-Host "│ 🕐 End Time: $($endTime.ToString('HH:mm:ss'))" -ForegroundColor White
+          Write-Host "└───────────────────────────────────────────┘" -ForegroundColor Cyan
+          
+          echo "TOTAL_MINUTES=$totalMinutes" >> $env:GITHUB_ENV
+          echo "END_TIME_TICKS=$($endTime.Ticks)" >> $env:GITHUB_ENV
+
+      - name: ⏳ MAINTAIN THE WORK SESSION
+        shell: pwsh
+        run: |
+          $endTime = New-Object System.DateTime($env:END_TIME_TICKS)
+          Write-Host "🚀 Server is running. Do not close this tab." -ForegroundColor Magenta
+          
+          while ((Get-Date) -lt $endTime.ToUniversalTime()) {
+              $remaining = $endTime - [System.TimeZoneInfo]::ConvertTimeFromUtc((Get-Date).ToUniversalTime(), [System.TimeZoneInfo]::FindSystemTimeZoneById("SE Asia Standard Time"))
+              Write-Host "`r⏳ Remaining: $($remaining.ToString('hh\:mm\:ss')) | IP: $env:TAILSCALE_IP " -NoNewline -ForegroundColor Green
+              Start-Sleep -Seconds 10
+          }
